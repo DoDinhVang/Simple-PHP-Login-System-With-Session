@@ -1,5 +1,6 @@
 <?php
 require_once('Auth.php');
+require_once('DatabaseSessionHandler.php');
 $db = new PDO(
     dsn: "mysql:host=127.0.0.1:3306;dbname=referralsystem",
     username: "root",
@@ -7,7 +8,10 @@ $db = new PDO(
 );
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-session_start();
+$sessionHandler = new DatabaseSessionHandler($db);
+session_set_save_handler($sessionHandler, true);
+session_name('id');
+session_start(['cookie_httponly' => true]);
 
 $auth = new Auth($db);
 

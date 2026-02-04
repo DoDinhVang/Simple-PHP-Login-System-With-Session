@@ -96,7 +96,7 @@ class Auth
             throw new \Exception("Session has not been started!");
         }
         session_regenerate_id(true);
-        $_SESSION["logged_shop_in"] = null;
+        session_destroy();
     }
     public function loggedShopIn(): bool|int
     {
