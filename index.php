@@ -1,6 +1,14 @@
 <?php
 require_once('Auth.php');
-require_once('DatabaseSessionHandler.php');
+
+// Configuration for session storage: 'database' or 'native'
+$sessionStorage = 'native'; // Change to 'native' to use default PHP session handling
+$sessionName = 'id';
+
+if ($sessionStorage === 'database') {
+    require_once('DatabaseSessionHandler.php');
+}
+
 $db = new PDO(
     dsn: "mysql:host=127.0.0.1:3306;dbname=referralsystem",
     username: "root",
@@ -8,9 +16,12 @@ $db = new PDO(
 );
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-$sessionHandler = new DatabaseSessionHandler($db);
-session_set_save_handler($sessionHandler, true);
-session_name('id');
+if ($sessionStorage === 'database') {
+    $sessionHandler = new DatabaseSessionHandler($db);
+    session_set_save_handler($sessionHandler, true);
+}
+
+session_name($sessionName);
 session_start(['cookie_httponly' => true]);
 
 $auth = new Auth($db);
