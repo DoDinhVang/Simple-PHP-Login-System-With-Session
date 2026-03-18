@@ -1,5 +1,9 @@
 <?php
 require_once('Auth.php');
+require_once('vendor/autoload.php');
+
+$config = require('config.php');
+$authMethod = $config['auth_method'];
 
 // Configuration for session storage: 'database' or 'native'
 $sessionStorage = 'native'; // Change to 'native' to use default PHP session handling
@@ -21,17 +25,32 @@ if ($sessionStorage === 'database') {
     session_set_save_handler($sessionHandler, true);
 }
 
-session_name($sessionName);
-session_start(['cookie_httponly' => true]);
-
 $auth = new Auth($db);
 
-$shopId = $auth->loggedShopIn();
+$shopId = false;
+if ($authMethod === "jwt") {
+    $token = $_COOKIE['auth_token'] ?? "";
+    $shopId = $auth->verifyToken($token);
+} else {
+    session_name($sessionName);
+    session_start(['cookie_httponly' => true]);
+    $shopId = $auth->loggedShopIn();
+}
+
 if (!$shopId) {
     if (isset($_POST["domain"]) || isset($_POST["accountName"]) || isset($_POST["password"])) {
         $shopId = $auth->authenticate($_POST["domain"], $_POST["accountName"], $_POST["password"]);
         if ($shopId) {
-            $auth->logShopIn($shopId);
+            if ($authMethod === "jwt") {
+                $token = $auth->genertateToken($shopId);
+                setcookie("auth_token", $token, [
+                    'expires' => time() + $config['jwt_expire'],
+                    'path' => '/',
+                    'httponly' => true
+                ]);
+            } else {
+                $auth->logShopIn($shopId);
+            }
             header("Location: /");
             exit;
         } else {
@@ -41,8 +60,13 @@ if (!$shopId) {
     require_once("login.php");
     exit;
 }
+
 if (isset($_POST["logout"])) {
-    $auth->logShopOut();
+    if ($authMethod === 'jwt') {
+        setcookie("auth_token", '', time() - 3600, '/');
+    } else {
+        $auth->logShopOut();
+    }
     header("Location: /");
     exit;
 }

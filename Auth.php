@@ -1,7 +1,38 @@
 <?php
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+
 class Auth
 {
-    public function __construct(protected PDO $db) {}
+    private $key;
+    private $algorithm = "HS256";
+    public function __construct(protected PDO $db)
+    {
+        $config = require 'config.php';
+        $this->key =  $config['jwt_secret'];
+    }
+
+    public function genertateToken($data): string
+    {
+        $payload = [
+            'iss' => 'ddvang.tra', // Người phát hành
+            'iat' => time(),            // Thời điểm tạo
+            'exp' => time() + 3600,     // Hết hạn sau 1 giờ
+            'sub' => $data            // ID cửa hàng
+        ];
+        $jwt = JWT::encode($payload, $this->key, $this->algorithm);
+        return $jwt;
+    }
+    public function verifyToken($token): array | bool
+    {
+        try {
+            $decoded = JWT::decode($token, new Key($this->key, $this->algorithm));
+            return $decoded->sub;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
     public function addShop(
         string $name,
         string $domain,
